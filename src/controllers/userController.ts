@@ -53,17 +53,31 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
         const user = await User.findOne({ email });
 
         if (user && (await user.comparePassword(password))) {
+            await user.updateStreak();
             res.status(200).json({
                 _id: user.id,
                 fullName: user.fullName,
                 email: user.email,
-                  token: generateToken(user.id),
+                token: generateToken(user.id),
             });
+            console.log("Login")
         } else {
             res.status(401).json({ message: "Invalid email or password" });
         }
     } catch (error) {
-        // console.log(error);
+        console.log(error);
         res.status(500).json({ message: "Server error", error });
+    }
+};
+
+
+export const userStreak = async (req: Request, res: Response) => {
+    try {
+        const user = await User.findById(req.params.userId);
+        // console.log(user);
+        res.json({ streak: user?.streak || 0 });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ error: "Server error" });
     }
 };

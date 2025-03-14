@@ -7,7 +7,10 @@ export interface UserDocument extends mongoose.Document {
     password: string,
     createdAt: Date,
     updatedAt: Date,
+    streak: Number,
+    lastLogin: Date,
     comparePassword(candidatePassword: string): Promise<boolean>;
+    updateStreak(): Promise<boolean>;
 };
 
 const UserSchema = new mongoose.Schema({
@@ -23,7 +26,15 @@ const UserSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true
-    }
+    },
+    streak: {
+        type: Number,
+        default: 0
+    },
+    lastLogin: {
+        type: Date,
+        default: null
+    },
 }, { timestamps: true });
 
 // Hash password before saving
@@ -40,6 +51,19 @@ UserSchema.methods.comparePassword = async function (enteredPassword: string) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
+UserSchema.methods.updateStreak = async function () {
+    const today = new Date().setHours(0, 0, 0, 0);
+    const lastLogin = this.lastLogin ? new Date(this.lastLogin).setHours(0, 0, 0, 0) : null;
+
+    if (!lastLogin || lastLogin < today - 86400000) {
+        this.streak = 1; // Reset if missed a day
+    } else if (lastLogin === today - 86400000) {
+        this.streak += 1; // Increase if logged in consecutively
+    }
+
+    this.lastLogin = today;
+    await this.save();
+};
 
 const User = mongoose.model<UserDocument>("User", UserSchema);
 
